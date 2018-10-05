@@ -1,5 +1,3 @@
-![CSI Logo](/src/images/CSIlogo.png)
-
 Cornell Spectrum Imager (CSI)
 ======
  
@@ -17,9 +15,10 @@ If this software is used in published research, please cite: "Data Processing Fo
 Installation
 ------------
 
-[Download ImageJ and CSI for Mac][Download Mac]
-
-[Download ImageJ and CSI for Windows 64bit][Download Win] ([32bit][Download 32bit]) (On Windows 7 or Vista, don't install in 'Program Files', but a directory that has write permissions, like 'Documents'.)
+In Fiji, go to Help>Update...
+Click "Manage update sites"
+Click "Add update site"
+Enter the URL: http://sites.imagej.net/CSI/
 
 You should also increase the allocated memory after installing by selecting `Edit > Options > Memory & Threads...`
 
@@ -57,15 +56,12 @@ I click on a button and nothing happens
 ImageJ is likely out of memory, and not able to add new windows. You should increase the amount of memory available to imageJ by selecting Edit>Options>Memory, increasing the allocated memory and restarting the program. For very large data sets be sure to use the 64-bit version (e.g ImageJ64.app on the Mac), which is found in the ImageJ program folder.
 
 
-[CSI]: https://code.google.com/archive/p/cornell-spectrum-imager/
+[CSI]: https://github.com/pdcueva/cornell-spectrum-imager/
 [Fiji]: http://imagej.net/Fiji
 [CSI wiki]: https://code.google.com/archive/p/cornell-spectrum-imager/wikis/Home.wiki
 [Paul Cueva]: http://www.paulcueva.com/
 [Robert Hovden]: http://www.roberthovden.com/
 [DOI]: https://dx.doi.org/DOI:10.1017/S1431927612000244
-[Download Mac]: ../../releases/download/1.5.0/ImageJ.CSI_v1.5.dmg
-[Download Win]: ../../releases/download/1.5.0/CSI.v1.5.64bit.exe
-[Download 32bit]: ../../releases/download/1.5.0/CSI.v1.5.32bit.exe
 [DOI2]: https://dx.doi.org/10.1017/S1551929512000995
 [FAQ]: https://code.google.com/archive/p/cornell-spectrum-imager/wikis/FrequentlyAskedQuestions.wiki
 [IJ guide]: http://rsb.info.nih.gov/ij/docs/guide/user-guide.pdf
