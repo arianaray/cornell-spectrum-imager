@@ -16,9 +16,13 @@ Installation
 ------------
 
 In Fiji, go to Help>Update...
+
 Click "Manage update sites"
+
 Click "Add update site"
+
 Enter the URL: http://sites.imagej.net/CSI/
+
 
 You should also increase the allocated memory after installing by selecting `Edit > Options > Memory & Threads...`
 
