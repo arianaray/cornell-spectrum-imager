@@ -348,6 +348,10 @@ public abstract class CSI_SpectrumData implements MouseListener, MouseMotionList
 	 */
 	public void mousePressed(MouseEvent e) {
 		Roi roi = img.getRoi();
+		if (roi == null) {
+			updateProfile();
+			return;
+		}
 		ImageStack stack = img.getStack();
 		ImageProcessor ip;
 		double[] values = new double[size];
