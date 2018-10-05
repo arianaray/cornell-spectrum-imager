@@ -55,6 +55,7 @@ public class CSI_4D_Analyzer implements PlugInFilter, MouseListener, MouseMotion
 
     ImagePlus img; //Image data
     int width, height, zsize, tsize;
+    boolean liveUpdate;
     double scale;
     ImagePlus realimage, kimage;
     Roi kroi, rroi;
@@ -62,6 +63,7 @@ public class CSI_4D_Analyzer implements PlugInFilter, MouseListener, MouseMotion
     ImageCanvas canvasr, canvask;
     int detectorMethod;
     JComboBox<String> comMethod;
+    JCheckBox chkLiveUpdate;
     JSlider sldLogScale;
 
     /*
@@ -73,6 +75,7 @@ public class CSI_4D_Analyzer implements PlugInFilter, MouseListener, MouseMotion
         tsize = img.getNFrames();
         width = img.getWidth();
         height = img.getHeight();
+        liveUpdate = true;
         kimage = new ImagePlus("Diffraction Space - "+img.getTitle(), img.getProcessor());
         kimage.setRoi(width/2,height/2,1,1);
         realimage = NewImage.createFloatImage("Real Space - "+img.getTitle(), zsize, tsize, 2, NewImage.FILL_BLACK);
@@ -90,6 +93,11 @@ public class CSI_4D_Analyzer implements PlugInFilter, MouseListener, MouseMotion
         Panel slid = new Panel();
         slid.add(sldLogScale);
         scale=0;
+
+        chkLiveUpdate = new JCheckBox("Live Update", true);
+        chkLiveUpdate.addChangeListener(this);
+        chkLiveUpdate.setVisible(true);
+        slid.add(chkLiveUpdate);
 
         kimage.show();
         canvask = kimage.getCanvas();
@@ -129,8 +137,10 @@ public class CSI_4D_Analyzer implements PlugInFilter, MouseListener, MouseMotion
     }
 
     void updateRealImage() {
-        if (kimage.getRoi() != null) kroi = kimage.getRoi();
-        if (kroi==null) return;
+        if (liveUpdate == false) return;
+        if (kimage.getRoi() != null) {
+            kroi = kimage.getRoi();
+        } else return;
         int numpoints=kroi.getContainedPoints().length;
         if (numpoints == 0) return;
         int roiWidth=kroi.getBounds().width;
@@ -152,6 +162,17 @@ public class CSI_4D_Analyzer implements PlugInFilter, MouseListener, MouseMotion
         for (int i = 1; i <= tsize*zsize; i++) {
             ip = stack.getProcessor(i);
             ip.setRoi(kroi);
+            if (detectorMethod==3) {
+                double sum = 0;
+                centerX=0;
+                centerY=0;
+                for (Point p : kroi) {
+                    centerX+= (double)ip.getf(p.x,p.y)*(p.x);
+                    centerY+= (double)ip.getf(p.x,p.y)*(p.y);
+                    sum+=(double)ip.getf(p.x,p.y);
+                }
+                center= new Point2D.Double(centerX/sum,centerY/sum);
+            }
             for (Point p : kroi){
                 multiplier = getMultiplier(p,center,roiWidth,roiHeight,numpoints);
                 values[0][i - 1]+= (float)ip.getf(p.x,p.y)*multiplier[0];
@@ -191,6 +212,7 @@ public class CSI_4D_Analyzer implements PlugInFilter, MouseListener, MouseMotion
     }
 
     void updateKImage() {
+        if (liveUpdate == false) return;
         if (realimage.getRoi() != null) rroi = realimage.getRoi();
         if (rroi == null) return;
         int numpoints=rroi.getContainedPoints().length;
@@ -276,6 +298,12 @@ public class CSI_4D_Analyzer implements PlugInFilter, MouseListener, MouseMotion
             else
                 scale=Math.exp(sldLogScale.getValue()/10);
             try {updateKImage();}
+            catch (Exception ex) {}
+        } else if (e.getSource()==chkLiveUpdate) {
+            liveUpdate = chkLiveUpdate.isSelected();
+            try {updateKImage();}
+            catch (Exception ex) {}
+            try {updateRealImage();}
             catch (Exception ex) {}
         }
     }

@@ -16,6 +16,9 @@ abstract class CSI_Fit {
 		Matrix m = DenseMatrix.Factory.zeros(s, 2);
 		Matrix n = DenseMatrix.Factory.zeros(s, col);
 		Matrix coeffs = DenseMatrix.Factory.zeros(2, col);
+		if (s==0) {
+			return coeffs;
+		}
 
 		// ymin = (new JamaDenseDoubleMatrix2D(y)).getMinValue();
 		// if (ymin>1)
