@@ -8,35 +8,36 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>14.0.0</version>
+		<version>31.1.0</version>
 		<relativePath />
 	</parent>
 
-	<groupId>com.spectrumimager.CSI</groupId>
-	<artifactId>Cornell_Spectrum_Imager</artifactId>
-	<version>2.0.1</version>
+	<groupId>com.spectrumimager.CSI</groupId>        <!-- FIXME: Your organization groupId here -->
+	<artifactId>Cornell_Spectrum_Imager</artifactId> <!-- FIXME: Your project artifactId here   -->
+	<version>0.1.2</version>
 
-
-	<name>Cornell Spectrum Imager</name>
-	<description>Spectrum and Diffraction image analyzer.</description>
-	<url>http://spectrumimager.com/</url>
-	<inceptionYear>2011</inceptionYear>
+	<name>Cornell Spectrum Imager</name>                                               <!-- FIXME: Your project name here          -->
+	<description>Spectrum and Diffraction image analyzer.</description> <!-- FIXME: Your project description here   -->
+	<url>http://spectrumimager.com/</url>                   <!-- FIXME: Your project website here       -->
+	<inceptionYear>2017</inceptionYear>                                        <!-- FIXME: Your project starting year here -->
 	<organization>
-		<name>Cornell University</name>
-		<url>http://cornell.edu/</url>
+		<name>Cornell University</name>           <!-- FIXME: Your organization name here    -->
+		<url>http://cornell.edu/</url> <!-- FIXME: Your organization website here -->
 	</organization>
 	<licenses>
-		<license>
+		<license>                         <!-- FIXME: Your license here -->
 			<name>Simplified BSD License</name>
+			<!--<url>https://creativecommons.org/publicdomain/zero/1.0/</url>-->
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
 
 	<developers>
+		<!-- See https://imagej.net/Team -->
 		<developer>
-			<id>ctrueden</id>
-			<name>Paul Cueva</name>
-			<url>http://paulcueva.com</url>
+			<id>arianaray</id>                                          <!-- FIXME: Your GitHub handle here -->
+			<name>Ariana Ray</name>                            <!-- FIXME: Your name here          -->
+			<url>https://mycompany.com/people/noma-onomatopoeia</url> <!-- FIXME: Your website here       -->
 			<roles>
 				<role>lead</role>
 				<role>developer</role>
@@ -49,7 +50,7 @@
 	</developers>
 	<contributors>
 		<contributor>
-			<name>Robert Hovden</name>
+			<name>None</name>
 		</contributor>
 	</contributors>
 
@@ -61,24 +62,34 @@
 	</mailingLists>
 
 	<scm>
-		<connection>scm:git:git://github.com/pdcueva/cornell-spectrum-imager</connection>
-		<developerConnection>scm:git:git@github.com:pdcueva/cornell-spectrum-imager</developerConnection>
+		<connection>scm:git:https://github.com/arianaray/example-imagej2-command</connection>
+		<developerConnection>scm:git:git@github.com:arianaray/example-imagej2-command</developerConnection>
 		<tag>HEAD</tag>
-		<url>https://github.com/pdcueva/cornell-spectrum-imager</url>
+		<url>https://github.com/arianaray/example-imagej2-command</url>
 	</scm>
 	<issueManagement>
 		<system>GitHub Issues</system>
-		<url>https://github.com/pdcueva/cornell-spectrum-imager</url>
+		<url>https://github.com/arianaray/example-imagej2-command/issues</url>
 	</issueManagement>
 	<ciManagement>
 		<system>None</system>
 	</ciManagement>
 
 	<properties>
-		<package-name>com.spectrumimager.CSI</package-name>
-		<license.licenseName>bsd_2</license.licenseName>
-		<license.copyrightOwners>Cornell University</license.copyrightOwners>
+		<package-name>com.spectrumimager.CSI</package-name>                   <!-- FIXME: Your project package prefix here -->
+		<!--<main-class>com.mycompany.imagej.GaussFiltering</main-class>-->        <!-- FIXME: Your project main class here, or delete for none -->
+		<license.licenseName>bsd_2</license.licenseName>                      <!-- FIXME: Your license-maven-plugin license code here -->
+		<license.copyrightOwners>Cornell University</license.copyrightOwners> <!-- FIXME: Your organization legal entity name here -->
 	</properties>
+
+	<!--
+	<repositories>
+		<repository>
+			<id>scijava.public</id>
+			<url>https://maven.scijava.org/content/groups/public</url>
+		</repository>
+	</repositories>
+	-->
 
 	<dependencies>
 		<dependency>
