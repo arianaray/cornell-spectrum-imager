@@ -1,0 +1,42 @@
+(Fiji Is Just) ImageJ 2.14.0/1.54f; Java 1.8.0_322 [64-bit]; Windows 10 10.0; 280MB of 48784MB (<1%)
+ 
+java.lang.ClassCastException: [B cannot be cast to [F
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.multiplyImages(CSI_Dynamic_FFT.java:296)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.getProfilePlot(CSI_Dynamic_FFT.java:334)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.run(CSI_Dynamic_FFT.java:70)
+	at ij.IJ.runUserPlugIn(IJ.java:244)
+	at ij.IJ.runPlugIn(IJ.java:210)
+	at ij.Executer.runCommand(Executer.java:152)
+	at ij.Executer.run(Executer.java:70)
+	at java.lang.Thread.run(Thread.java:750)
+
+
+(Fiji Is Just) ImageJ 2.14.0/1.54f; Java 1.8.0_322 [64-bit]; Windows 10 10.0; 284MB of 48784MB (<1%)
+ 
+java.lang.ClassCastException: [F cannot be cast to [B
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.multiplyImages(CSI_Dynamic_FFT.java:299)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.getProfilePlot(CSI_Dynamic_FFT.java:336)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.run(CSI_Dynamic_FFT.java:72)
+	at ij.IJ.runUserPlugIn(IJ.java:244)
+	at ij.IJ.runPlugIn(IJ.java:210)
+	at ij.Executer.runCommand(Executer.java:152)
+	at ij.Executer.run(Executer.java:70)
+	at java.lang.Thread.run(Thread.java:750)
+	
+	Fixed these issues
+	
+	Version 1.3 implements Hanning window.
+	To do: make B/C and LUT choices sticky.
+	To do: make the new window an FFT
+	To do: get the FFT scale
+	To do: make a button for filter on/off. 
+	To do: make FFT of stack. (Make it tied to the slice you're on?)
+	To do: check if any ROI will work. 
+	//
+	To do: For 4D Analyzer, allow circular ROI to work
+	To do: For 4D Analyzer, make B/C and LUT choices sticky. 
+	To do: Cepstral transform option?
+
+Note: ip.createProcessor​(int width, int height) 	
+Returns a new, blank FloatProcessor with the specified width and height.
+Use this to make a new processor in the code. 

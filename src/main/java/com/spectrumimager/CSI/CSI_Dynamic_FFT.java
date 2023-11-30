@@ -11,6 +11,8 @@ import java.awt.event.MouseMotionListener;
 import java.awt.Rectangle;
 
 import java.lang.Math;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 import ij.IJ;
 import ij.ImageListener;
@@ -194,32 +196,31 @@ public class CSI_Dynamic_FFT
         //while(i<1.5*maxN) i*=2; //<-- fht example version
         int pix = (int) Math.pow(2,Math.ceil((Math.log(maxN) / Math.log(2)))); //<-- my version
 
-        float[] filter = new float[pix*pix]; //<-- create empty filter
+        float[][] filter = new float[pix][pix]; //<-- create empty filter
 
-        for (int n1=0; n1<pix*pix; n1++) {
-            int row = n1 % pix;
-            int col = n1 - (n1 % pix)*pix;
-            float r1 = 2*row/pix -1;
-            float r2 = 2*col/pix -1;
-            float r3 = (float) (Math.pow(r1,2)+Math.pow(r2,2));
-            r3 = (float) Math.sqrt(r3);
-            float w3 = (float) ((float) 0.5*(Math.cos(Math.PI*r3)+1));
-            if (r3 >= 0 && r3 < 1) {
-                filter[n1] = 1*w3;
-            }
-            else {
-                filter[n1] = 0;
+        for (int n1=0; n1<pix; n1++) {
+            for (int n2=0; n2<pix; n2++) {
+                //int row = n1 % pix;
+                //int col = n1 - (n1 % pix) * pix;
+                float r1 = (float) (2 * n1) / pix - 1;
+                float r2 = (float) (2 * n2) / pix - 1;
+                float r3 = (float) (Math.pow(r1, 2) + Math.pow(r2, 2));
+                r3 = (float) Math.sqrt(r3);
+                float w3 = (float) ((float) 0.5 * (Math.cos(Math.PI * r3) + 1));
+                if (r3 >= 0 && r3 < 1) {
+                    filter[n1][n2] = 1 * w3;
+                } else {
+                    filter[n1][n2] = 0;
+                }
             }
         }
 
-        FloatProcessor filterP = new FloatProcessor(pix, pix, filter, null);
-
-        return filterP;
+        return new FloatProcessor(filter);
     }
 
     void tileImage() {
 
-        Rectangle roiRect = this.imp_copy.getRoi();
+        Roi roiRect = this.imp_copy.getRoi();
         int maxN = Math.max(roiRect.getBounds().width, roiRect.getBounds().height);
         /** Calculate power of 2 size */
         int pix = (int) Math.pow(2,Math.ceil((Math.log(maxN) / Math.log(2))));
@@ -227,8 +228,8 @@ public class CSI_Dynamic_FFT
         Rectangle fitRect = new Rectangle();
         fitRect.x = (int) Math.round((pix - roiRect.getBounds().width)/2.0);
         fitRect.y = (int) Math.round((pix - roiRect.getBounds().height)/2.0);
-        fitRect.width = roiRect.width;
-        fitRect.height = roiRect.height;
+        fitRect.width = roiRect.getBounds().width;
+        fitRect.height = roiRect.getBounds().height;
         /** Pad image to power of 2 size */
         tileMirror(imp_copy.getProcessor(), pix, pix, fitRect.x, fitRect.y);
         /** You are here */
@@ -241,7 +242,7 @@ public class CSI_Dynamic_FFT
     void tileMirror(ImageProcessor ip, int width, int height, int x, int y) {
         if (x < 0 || x > (width -1) || y < 0 || y > (height -1)) {
             IJ.error("Image to be tiled is out of bounds.");
-            return null;
+            return;
         }
 
         this.ip_copy = ip.createProcessor(width, height);
@@ -293,9 +294,30 @@ public class CSI_Dynamic_FFT
 
     ImageProcessor multiplyImages(ImageProcessor ip_copy, FloatProcessor filter) {
 
-        float[] ip_pix = (float[])ip_copy.getPixels();
-        /** you are here!!*/
+        int w2 = ip_copy.getWidth();
+        int h2 = ip_copy.getHeight();
+        double val;
 
+        for (int i = 0; i < h2; i++) {
+            for (int j = 0; j < w2; j++) {
+                val = ip_copy.getPixelValue(i, j)*filter.getPixelValue(i, j);
+                ip_copy.putPixelValue(i, j, val);
+            }
+        }
+
+        /*
+        float[] ip_pix = new float[]{ByteBuffer.wrap((byte[]) ip_copy.getPixels()).order(ByteOrder.LITTLE_ENDIAN).getFloat()};
+        float[] filt_pix = new float[]{ByteBuffer.wrap((byte[]) filter.getPixels()).order(ByteOrder.LITTLE_ENDIAN).getFloat()};
+
+        for (int i = 0; i < ip_pix.length; i++) {
+            ip_pix[i] *= filt_pix[i];
+            ip_copy.putPixelValue();
+        }
+
+        ip_copy.setPixels(ip_pix);
+        */
+
+        return ip_copy;
     }
 
     /** get a profile, analyze it and return a plot (or null if not possible) */
@@ -323,19 +345,17 @@ public class CSI_Dynamic_FFT
         /** Tile image roi*/
         tileImage(); //sets up cropped ip with power of 2
         /** Multiply image roi with filter*/
-        ImageProcessor ip2 = filter*ip_copy; // YOU ARE HERE!!!
-
-        //FFT.filter(imp_copy,filter);
+        this.imp_copy = new ImagePlus(imp.getTitle(), multiplyImages(this.ip_copy, filter));
 
         ImagePlus imp2 = FFT.forward(imp_copy);
 
         if (imp2 == null) return null;
 
-        ImageProcessor ip2 = imp2.getProcessor();
-
+        //ImagePlus tmp = new ImagePlus(imp.getTitle(), filter.getPixels());
         //ImagePlus plot = new ImagePlus("FFT of - "+imp.getShortTitle(), ip2);
 
-        return ip2;//plot.getProcessor();
+        return imp2.getProcessor();//plot.getProcessor();
+        //return ip_copy;
     }
 
 
