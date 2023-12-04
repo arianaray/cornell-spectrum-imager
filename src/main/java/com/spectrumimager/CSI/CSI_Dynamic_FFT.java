@@ -38,6 +38,7 @@ import ij.plugin.PlugIn;
 import ij.process.ImageProcessor;
 import ij.plugin.FFT;
 import ij.process.FHT;
+import ij.process.LUT;
 import ij.util.Tools;
 import ij.process.FloatProcessor;
 import ij.plugin.filter.FFTCustomFilter;
@@ -69,6 +70,7 @@ public class CSI_Dynamic_FFT
     private double img_max; //display maximum of plotImage
     private int img_size_x; //size of plotImage
     private int img_size_y; //size of plotImage
+    private LUT img_lut; //LUT og plotImage
     private Thread bgThread;                //thread for plotting (in the background)
     private boolean doUpdate;               //tells the background thread to update
     //private boolean doUpdateBC;               //tells the background thread to update
@@ -95,6 +97,7 @@ public class CSI_Dynamic_FFT
         this.img_max = plotImage.getDisplayRangeMax();
         this.img_size_x = plotImage.getHeight();
         this.img_size_y = plotImage.getWidth();
+        this.img_lut = plotImage.getProcessor().getLut();
         IJ.wait(50);
         positionPlotWindow();
                                             // thread for plotting in the background
@@ -155,12 +158,19 @@ public class CSI_Dynamic_FFT
                     //plotImage.setTitle("Changed max"); //for debugging
                     this.img_max = imp.getDisplayRangeMax();
                 }
+
+                if (this.img_lut != imp.getProcessor().getLut()) {
+                    //plotImage.setTitle("Changed LUT"); //for debugging
+                    this.img_lut = imp.getProcessor().getLut();
+                    //plotImage.setLut(this.img_lut);
+                }
                 //this.img_min = imp.getDisplayRangeMin();
                 //this.img_max = imp.getDisplayRangeMax();
             }
             else {
                 //plotImage.setTitle("Changed size"); for debugging
                 plotImage.setDisplayRange(this.img_min, this.img_max);
+                plotImage.setLut(this.img_lut);
             }
             this.img_size_x = imp.getHeight();
             this.img_size_y = imp.getWidth();
@@ -184,6 +194,7 @@ public class CSI_Dynamic_FFT
             ImageProcessor fft = getFFT();
             if (fft != null) plotImage.setProcessor(null, fft);
             plotImage.setDisplayRange(this.img_min, this.img_max);
+            plotImage.setLut(this.img_lut);
             //plotImage.updateAndDraw();
             synchronized(this) {
                 if (doUpdate) {
