@@ -30,3 +30,22 @@ java.lang.ClassCastException: [F cannot be cast to [B
 	To do: make the new window an FFT
 	To do: get the FFT scale
 	To do: make a button for filter on/off. 
+	To do: make FFT of stack. (Make it tied to the slice you're on?)
+	To do: check if any ROI will work. 
+	--do I need to include "throwsIOException" to method?
+	//
+	To do: For 4D Analyzer, allow circular ROI to work
+	To do: For 4D Analyzer, make B/C and LUT choices sticky. 
+	To do: Cepstral transform option?
+
+Note: ip.createProcessor​(int width, int height) 	
+Returns a new, blank FloatProcessor with the specified width and height.
+Use this to make a new processor in the code. 
+
+Note: Check out ImageLib2 documentation. 
+
+Version 0.1.3:
+Performs FFT with calculating Hamming window
+
+Version 0.1.4:
+Performs FHT. To do: brightness/contrast listener and try transform1d in FHT with built-in filter. 

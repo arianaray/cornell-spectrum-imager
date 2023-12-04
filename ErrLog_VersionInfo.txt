@@ -32,6 +32,7 @@ java.lang.ClassCastException: [F cannot be cast to [B
 	To do: make a button for filter on/off. 
 	To do: make FFT of stack. (Make it tied to the slice you're on?)
 	To do: check if any ROI will work. 
+	--do I need to include "throwsIOException" to method?
 	//
 	To do: For 4D Analyzer, allow circular ROI to work
 	To do: For 4D Analyzer, make B/C and LUT choices sticky. 
@@ -40,3 +41,21 @@ java.lang.ClassCastException: [F cannot be cast to [B
 Note: ip.createProcessor​(int width, int height) 	
 Returns a new, blank FloatProcessor with the specified width and height.
 Use this to make a new processor in the code. 
+
+Note: Check out ImageLib2 documentation. 
+
+Version 0.1.3:
+Performs FFT with calculating Hamming window
+
+Version 0.1.4:
+Performs FHT. To do: brightness/contrast listener and try transform1d in FHT with built-in filter. 
+
+Exception in thread "Dynamic Profiler Plot" java.lang.ArrayIndexOutOfBoundsException: 0
+	at ij.process.FloatProcessor.<init>(FloatProcessor.java:58)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.makeHammingWindow(CSI_Dynamic_FFT.java:247)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.getFFT(CSI_Dynamic_FFT.java:359)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.run(CSI_Dynamic_FFT.java:154)
+	at java.lang.Thread.run(Thread.java:750)
+
+
+Note: fix size

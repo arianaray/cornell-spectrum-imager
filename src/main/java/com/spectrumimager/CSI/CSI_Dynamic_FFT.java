@@ -9,6 +9,13 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.Rectangle;
+/** For brightness/contrast adjustment: */
+//import java.awt.event.AdjustmentListener;
+//import java.awt.event.ItemListener;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.ItemEvent;
+import ij.plugin.frame.ContrastAdjuster;
+/** End brightness/contrast */
 
 import java.lang.Math;
 import java.nio.ByteBuffer;
@@ -30,6 +37,7 @@ import ij.measure.Calibration;
 import ij.plugin.PlugIn;
 import ij.process.ImageProcessor;
 import ij.plugin.FFT;
+import ij.process.FHT;
 import ij.util.Tools;
 import ij.process.FloatProcessor;
 import ij.plugin.filter.FFTCustomFilter;
@@ -53,12 +61,18 @@ public class CSI_Dynamic_FFT
     //ImageListener: listens to changes (updateAndDraw) and closing of an image
     //Runnable: for background thread
     private ImagePlus imp;                  //the ImagePlus that we listen to and the last one
-    /** Ariana addition for FFT filtering*/
+    /** Ariana's addition for FFT filtering*/
     private ImagePlus imp_copy; //the ImagePlus that the filter is applied to
     private ImageProcessor ip_copy;
     private ImagePlus plotImage;            //where we plot the profile
+    private double img_min; //display minimum of plotimage
+    private double img_max; //display maximum of plotImage
+    private int img_size_x; //size of plotImage
+    private int img_size_y; //size of plotImage
     private Thread bgThread;                //thread for plotting (in the background)
     private boolean doUpdate;               //tells the background thread to update
+    //private boolean doUpdateBC;               //tells the background thread to update
+    //private ContrastAdjuster bc = new ContrastAdjuster(); //for adjusting contrast
 
     /* Initialization and plot for the first time. Later on, updates are triggered by the listeners **/
     public void run(String arg) {
@@ -69,13 +83,18 @@ public class CSI_Dynamic_FFT
         if (!isSelection()) {
             IJ.error("Dynamic Profiler","Line or Rectangular Selection Required"); return;
         }
-        ImageProcessor ip = getProfilePlot();  // get a profile
+        ImageProcessor ip = getFFT();  // get a profile
+
         if (ip==null) {                     // no profile?
             IJ.error("Dynamic Profiler","No Profile Obtained"); return;
         }
                                             // new plot window
         plotImage = new ImagePlus("Profile of "+imp.getShortTitle(), ip);
         plotImage.show();
+        this.img_min = plotImage.getDisplayRangeMin();
+        this.img_max = plotImage.getDisplayRangeMax();
+        this.img_size_x = plotImage.getHeight();
+        this.img_size_y = plotImage.getWidth();
         IJ.wait(50);
         positionPlotWindow();
                                             // thread for plotting in the background
@@ -90,7 +109,21 @@ public class CSI_Dynamic_FFT
     public synchronized void mouseDragged(MouseEvent e) { doUpdate = true; notify(); }
     public synchronized void mouseClicked(MouseEvent e) { doUpdate = true; notify(); }
     public synchronized void keyPressed(KeyEvent e) { doUpdate = true; notify(); }
-    // unused listeners concering actions in the corresponding ImagePlus
+    /*
+    // For Brightness contrast
+    public synchronized void adjustmentValueChanged(AdjustmentEvent e) {
+        doUpdateBC = true;
+        this.img_min = plotImage.getDisplayRangeMin();
+        this.img_max = plotImage.getDisplayRangeMax();
+        notify();
+    }
+    // For Brightness contrast
+    public synchronized void itemStateChanged(ItemEvent e) {
+        doUpdateBC = true; notify();
+    }
+
+     */
+    // unused listeners concerning actions in the corresponding ImagePlus
     public void mouseReleased(MouseEvent e) {}
     public void mouseExited(MouseEvent e) {}
     public void mouseEntered(MouseEvent e) {}
@@ -110,6 +143,29 @@ public class CSI_Dynamic_FFT
             doUpdate = true;
             notify();
         }
+        /** added to attempt making sticky brightness contrast*/
+
+        if (imp == this.plotImage ) {
+            if (this.img_size_x == imp.getHeight()) {
+                if (this.img_min != imp.getDisplayRangeMin()) {
+                    //plotImage.setTitle("Changed min"); //for debugging
+                    this.img_min = imp.getDisplayRangeMin();
+                }
+                if (this.img_max != imp.getDisplayRangeMax()) {
+                    //plotImage.setTitle("Changed max"); //for debugging
+                    this.img_max = imp.getDisplayRangeMax();
+                }
+                //this.img_min = imp.getDisplayRangeMin();
+                //this.img_max = imp.getDisplayRangeMax();
+            }
+            else {
+                //plotImage.setTitle("Changed size"); for debugging
+                plotImage.setDisplayRange(this.img_min, this.img_max);
+            }
+            this.img_size_x = imp.getHeight();
+            this.img_size_y = imp.getWidth();
+        }
+
     }
 
     // if either the plot image or the image we are listening to is closed, exit
@@ -124,8 +180,11 @@ public class CSI_Dynamic_FFT
     public void run() {
         while (true) {
             IJ.wait(50);  //delay to make sure the roi has been updated
-            ImageProcessor ip = getProfilePlot();
-            if (ip != null) plotImage.setProcessor(null, ip);
+            //ImageProcessor ip = getProfilePlot(); //working version 0.1.3
+            ImageProcessor fft = getFFT();
+            if (fft != null) plotImage.setProcessor(null, fft);
+            plotImage.setDisplayRange(this.img_min, this.img_max);
+            //plotImage.updateAndDraw();
             synchronized(this) {
                 if (doUpdate) {
                     doUpdate = false;  //and loop again
@@ -154,6 +213,7 @@ public class CSI_Dynamic_FFT
         canvas.addKeyListener(this);
         imp.addImageListener(this);
         plotImage.addImageListener(this);
+
     }
 
     private void removeListeners() {
@@ -265,28 +325,28 @@ public class CSI_Dynamic_FFT
 
         for (int i=-i1; i<i2; i += 2) {
             for (int j=-j1; j<j2; j += 2) {
-                ip_copy.insert(ip2, x-i*w2, y-j*h2);
+                this.ip_copy.insert(ip2, x-i*w2, y-j*h2);
             }
         }
 
         ip2.flipHorizontal();
         for (int i=-i1+1; i<i2; i += 2) {
             for (int j=-j1; j<j2; j += 2) {
-                ip_copy.insert(ip2, x-i*w2, y-j*h2);
+                this.ip_copy.insert(ip2, x-i*w2, y-j*h2);
             }
         }
 
         ip2.flipVertical();
         for (int i=-i1+1; i<i2; i += 2) {
             for (int j=-j1+1; j<j2; j += 2) {
-                ip_copy.insert(ip2, x-i*w2, y-j*h2);
+                this.ip_copy.insert(ip2, x-i*w2, y-j*h2);
             }
         }
 
         ip2.flipHorizontal();
         for (int i=-i1; i<i2; i += 2) {
             for (int j=-j1+1; j<j2; j += 2) {
-                ip_copy.insert(ip2, x-i*w2, y-j*h2);
+                this.ip_copy.insert(ip2, x-i*w2, y-j*h2);
             }
         }
 
@@ -305,23 +365,12 @@ public class CSI_Dynamic_FFT
             }
         }
 
-        /*
-        float[] ip_pix = new float[]{ByteBuffer.wrap((byte[]) ip_copy.getPixels()).order(ByteOrder.LITTLE_ENDIAN).getFloat()};
-        float[] filt_pix = new float[]{ByteBuffer.wrap((byte[]) filter.getPixels()).order(ByteOrder.LITTLE_ENDIAN).getFloat()};
-
-        for (int i = 0; i < ip_pix.length; i++) {
-            ip_pix[i] *= filt_pix[i];
-            ip_copy.putPixelValue();
-        }
-
-        ip_copy.setPixels(ip_pix);
-        */
-
         return ip_copy;
     }
 
     /** get a profile, analyze it and return a plot (or null if not possible) */
-    ImageProcessor getProfilePlot() {
+    ImageProcessor getFFT() {
+    //ImageProcessor getProfilePlot() {
         if (!isSelection()) return null;
         ImageProcessor ip = imp.getProcessor();
         Roi roi = imp.getRoi();
@@ -347,14 +396,19 @@ public class CSI_Dynamic_FFT
         /** Multiply image roi with filter*/
         this.imp_copy = new ImagePlus(imp.getTitle(), multiplyImages(this.ip_copy, filter));
 
-        ImagePlus imp2 = FFT.forward(imp_copy);
+        ImagePlus imp2 = FFT.forward(imp_copy); //works 0.1.3
+
+        FHT fht = new FHT(ip_copy);
+        fht.transform();
+        //fht.swapQuadrants();
+        //ImageProcessor fht_pix =fht.getRawPowerSpectrum();
+        //fht_pix.log();
+        ImageProcessor fht_pix = fht.getPowerSpectrum();
 
         if (imp2 == null) return null;
 
-        //ImagePlus tmp = new ImagePlus(imp.getTitle(), filter.getPixels());
-        //ImagePlus plot = new ImagePlus("FFT of - "+imp.getShortTitle(), ip2);
-
-        return imp2.getProcessor();//plot.getProcessor();
+        return fht_pix;
+        //return imp2.getProcessor();//plot.getProcessor();
         //return ip_copy;
     }
 
@@ -368,4 +422,5 @@ public class CSI_Dynamic_FFT
             return false;
         return roi.getType()==Roi.LINE || roi.getType()==Roi.RECTANGLE;
     }
+
 }
