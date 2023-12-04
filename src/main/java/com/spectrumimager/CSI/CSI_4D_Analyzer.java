@@ -65,6 +65,11 @@ public class CSI_4D_Analyzer implements PlugInFilter, MouseListener, MouseMotion
     JComboBox<String> comMethod;
     JCheckBox chkLiveUpdate;
     JSlider sldLogScale;
+    private LUT k_lut; //Ariana; DP LUT
+    private double r_img_min; //Ariana; RS image min
+    private double r_img_max; //Ariana; RS image max
+    private double k_img_min; //Ariana; DP image min
+    private double k_img_max; //Ariana; DP image max
 
     /*
      * Load image data and start Cornell Diffraction Imager
@@ -110,6 +115,12 @@ public class CSI_4D_Analyzer implements PlugInFilter, MouseListener, MouseMotion
         realimage.getWindow().add(drop);
         IJ.run("Out [-]");
         IJ.run("In [+]");
+
+        this.k_lut = kimage.getProcessor().getLut();
+        this.k_img_min = kimage.getDisplayRangeMin();
+        this.k_img_max = kimage.getDisplayRangeMax();
+        this.r_img_min = realimage.getDisplayRangeMin();
+        this.r_img_max = realimage.getDisplayRangeMax();
 
         addListeners();
         img.hide();
@@ -236,7 +247,10 @@ public class CSI_4D_Analyzer implements PlugInFilter, MouseListener, MouseMotion
         if (scale!=0)
             fpk.applyMacro("v=log(1+"+Double.toString(scale)+"*v/"+Double.toString(fpk.getMax())+")");
         fpk.resetMinAndMax();
+        //fpk.setLut(k_lut);
         kimage.setProcessor(fpk);
+        kimage.setLut(k_lut);
+
     }
 
     /*
@@ -279,7 +293,36 @@ public class CSI_4D_Analyzer implements PlugInFilter, MouseListener, MouseMotion
         }
     }
 
-    public void imageUpdated(ImagePlus imp) {}
+    public void imageUpdated(ImagePlus imp) {
+        //Ariana additions:
+        if (imp == this.realimage ){
+            if (this.r_img_min != imp.getDisplayRangeMin()) {
+                //plotImage.setTitle("Changed min"); //for debugging
+                this.r_img_min = imp.getDisplayRangeMin();
+            }
+            if (this.r_img_max != imp.getDisplayRangeMax()) {
+                //plotImage.setTitle("Changed max"); //for debugging
+                this.r_img_max = imp.getDisplayRangeMax();
+            }
+
+        }
+        if (imp == this.kimage ){
+            if (this.k_img_min != imp.getDisplayRangeMin()) {
+                //plotImage.setTitle("Changed min"); //for debugging
+                this.k_img_min = imp.getDisplayRangeMin();
+            }
+            if (this.k_img_max != imp.getDisplayRangeMax()) {
+                //plotImage.setTitle("Changed max"); //for debugging
+                this.k_img_max = imp.getDisplayRangeMax();
+            }
+
+            if (this.k_lut != imp.getProcessor().getLut()) {
+                //plotImage.setTitle("Changed LUT"); //for debugging
+                this.k_lut = imp.getProcessor().getLut();
+                //plotImage.setLut(this.img_lut);
+            }
+        }
+    }
 
     public void imageOpened(ImagePlus imp) {}
 

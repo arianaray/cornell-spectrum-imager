@@ -49,6 +49,7 @@ Performs FFT with calculating Hamming window
 
 Version 0.1.4:
 Performs FHT. To do: brightness/contrast listener and try transform1d in FHT with built-in filter. 
+4D Analyzer: Keeps LUT in k image. Test in ImageJ1 
 
 Exception in thread "Dynamic Profiler Plot" java.lang.ArrayIndexOutOfBoundsException: 0
 	at ij.process.FloatProcessor.<init>(FloatProcessor.java:58)
@@ -58,4 +59,6 @@ Exception in thread "Dynamic Profiler Plot" java.lang.ArrayIndexOutOfBoundsExcep
 	at java.lang.Thread.run(Thread.java:750)
 
 
-Note: fix size
+Version 0.1.5:
+To/do: Try to preserve complex frequency info in FFT. 
+For 4D Analyzer: while mouse is moving, sum over every other point if box contains more than 100 pts?

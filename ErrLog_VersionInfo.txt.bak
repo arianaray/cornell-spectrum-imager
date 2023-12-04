@@ -49,3 +49,15 @@ Performs FFT with calculating Hamming window
 
 Version 0.1.4:
 Performs FHT. To do: brightness/contrast listener and try transform1d in FHT with built-in filter. 
+
+Exception in thread "Dynamic Profiler Plot" java.lang.ArrayIndexOutOfBoundsException: 0
+	at ij.process.FloatProcessor.<init>(FloatProcessor.java:58)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.makeHammingWindow(CSI_Dynamic_FFT.java:247)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.getFFT(CSI_Dynamic_FFT.java:359)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.run(CSI_Dynamic_FFT.java:154)
+	at java.lang.Thread.run(Thread.java:750)
+
+
+Version 0.1.5:
+To/do: Try to preserve complex frequency info in FFT. 
+For 4D Analyzer: while mouse is moving, sum over every other point if box contains more than 100 pts?
