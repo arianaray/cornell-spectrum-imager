@@ -49,6 +49,7 @@ Performs FFT with calculating Hamming window
 
 Version 0.1.4:
 Performs FHT. To do: brightness/contrast listener and try transform1d in FHT with built-in filter. 
+4D Analyzer: Keeps LUT in k image. Test in ImageJ1 
 
 Exception in thread "Dynamic Profiler Plot" java.lang.ArrayIndexOutOfBoundsException: 0
 	at ij.process.FloatProcessor.<init>(FloatProcessor.java:58)
@@ -59,5 +60,26 @@ Exception in thread "Dynamic Profiler Plot" java.lang.ArrayIndexOutOfBoundsExcep
 
 
 Version 0.1.5:
-To/do: Try to preserve complex frequency info in FFT. 
+To/do: Try to preserve complex frequency info in FFT. One idea is to edit plotImage directly in the FFT method, or alternately to calculate the FFT in the main run method. 
+--need to fix array index out of bounds exception when no ROI selected. 
 For 4D Analyzer: while mouse is moving, sum over every other point if box contains more than 100 pts?
+
+FFT works. However, can't figure out this error message each time things are closed:
+Exception in thread "AWT-EventQueue-0" java.lang.NullPointerException
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.closePlotImage(CSI_Dynamic_FFT.java:203)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.imageClosed(CSI_Dynamic_FFT.java:171)
+	at ij.ImagePlus$1.run(ImagePlus.java:3049)
+	at java.awt.event.InvocationEvent.dispatch(InvocationEvent.java:311)
+	at java.awt.EventQueue.dispatchEventImpl(EventQueue.java:758)
+	at java.awt.EventQueue.access$500(EventQueue.java:97)
+	at java.awt.EventQueue$3.run(EventQueue.java:709)
+	at java.awt.EventQueue$3.run(EventQueue.java:703)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$JavaSecurityAccessImpl.doIntersectionPrivilege(ProtectionDomain.java:74)
+	at java.awt.EventQueue.dispatchEvent(EventQueue.java:728)
+	at java.awt.EventDispatchThread.pumpOneEventForFilters(EventDispatchThread.java:205)
+	at java.awt.EventDispatchThread.pumpEventsForFilter(EventDispatchThread.java:116)
+	at java.awt.EventDispatchThread.pumpEventsForHierarchy(EventDispatchThread.java:105)
+	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:101)
+	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:93)
+	at java.awt.EventDispatchThread.run(EventDispatchThread.java:82)
