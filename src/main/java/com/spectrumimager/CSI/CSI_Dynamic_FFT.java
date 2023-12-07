@@ -44,14 +44,11 @@ import ij.process.FloatProcessor;
 import ij.plugin.filter.FFTCustomFilter;
 
 /**
- * This plugin continuously plots the profile along a line scan or a rectangle.
+ * This plugin continuously plots the FFT of a rectangle.
  * The profile is updated if the image changes, thus it can be used to monitor
  * the effect of a filter during preview.
- * Plot size etc. are set by Edit>Options>Profile Plot Options
  *
  * Restrictions:
- * - The plot window is not calibrated. Use Analyze>Plot Profile to get a
- *   spatially calibrated plot window where you can do measurements.
  *
  * By Wayne Rasband and Michael Schmid
  * Version 2009-Jun-09: obeys 'fixed y axis scale' in Edit>Options>Profile Plot Options
@@ -82,12 +79,20 @@ public class CSI_Dynamic_FFT
             IJ.noImage(); return;
         }
         if (!isSelection()) {
-            IJ.error("Dynamic FFT","Rectangular Selection Required"); return;
+            //IJ.error("Dynamic FFT","Rectangular Selection Required");
+            Roi roi = new Roi(0,0,imp.getWidth(),imp.getHeight());
+            imp.setRoi(roi);
+            return;
+
         }
+
+        //System.out.println("Initial roi: " + imp.getRoi());
 
         // new plot window
         FHT fft = getFFT();
         fft.transform();
+        IJ.showProgress(0.0);
+        fft.setShowProgress(false);
         plotImage = new ImagePlus();
         plotImage.setProcessor(fft.getPowerSpectrum());
         plotImage.show();
@@ -109,7 +114,7 @@ public class CSI_Dynamic_FFT
         bgThread = new Thread(this, "Dynamic FFT Plot");
         bgThread.setPriority(Math.max(bgThread.getPriority()-3, Thread.MIN_PRIORITY));
         bgThread.start();
-        createListeners();
+        createListeners(this.imp);
     }
 
     // these listeners are activated if the selection is changed in the corresponding ImagePlus
@@ -131,8 +136,14 @@ public class CSI_Dynamic_FFT
     public synchronized void imageUpdated(ImagePlus imp) {
         boolean sliceChanged = false;
         if (imp == this.imp ) {
-            if (!isSelection())
-                IJ.run(imp, "Restore Selection", "");
+            if (!isSelection()) {
+                Roi roi = new Roi(0, 0, imp.getWidth(), imp.getHeight());
+                imp.setRoi(roi);
+            }
+
+            //System.out.println("imageUpdated roi: " + imp.getRoi());
+
+                //IJ.run(imp, "Restore Selection", "");
             if (this.slice_num != imp.getCurrentSlice()) {
                 sliceChanged = true;
             }
@@ -160,24 +171,46 @@ public class CSI_Dynamic_FFT
             }
             this.img_size_x = imp.getHeight();
             this.img_size_y = imp.getWidth();
+            //this.img_lut = imp.getProcessor().getLut();
         }
 
     }
 
     // if either the plot image or the image we are listening to is closed, exit
-    public void imageClosed(ImagePlus imp) {
-        if (imp == this.imp || imp == plotImage) {
+    public void imageClosed(ImagePlus imp_close) {
+        /*
+        if (imp == this.imp || imp == this.plotImage) {
             removeListeners();
             closePlotImage();  //also terminates the background thread
         }
+        */
+        if (imp_close == this.imp) {
+            removeListeners(plotImage);
+            closePlotImage(plotImage);
+        }
+        if (imp_close == this.plotImage) {
+            removeListeners(imp);
+            //closePlotImage(plotImage);
+        }
+        //removeListeners(imp_close);
+        //closePlotImage(imp_close);
     }
 
     // the background thread for plotting.
     public void run() {
         while (true) {
             IJ.wait(50);  //delay to make sure the roi has been updated
+
+            if (!isSelection()) {
+                Roi roi = new Roi(0, 0, imp.getWidth(), imp.getHeight());
+                imp.setRoi(roi);
+                //System.out.println("Run roi: " + imp.getRoi());
+            }
+
             FHT fft = getFFT();
             fft.transform();
+            IJ.showProgress(0.0);
+            fft.setShowProgress(false); //you are here ***
             plotImage.setProcessor(fft.getPowerSpectrum());
             plotImage.setDisplayRange(this.img_min, this.img_max);
             plotImage.setLut(this.img_lut);
@@ -199,31 +232,32 @@ public class CSI_Dynamic_FFT
         }
     }
 
-    private synchronized void closePlotImage() {    //close the plot window and terminate the background thread
+    private synchronized void closePlotImage(ImagePlus imp_close) {    //close the plot window and terminate the background thread
         bgThread.interrupt();
-        plotImage.getWindow().close();
-
+        imp_close.getWindow().close();
+        //plotImage.getWindow().close();
+        //imp.getWindow().close();
     }
 
-    private void createListeners() {
-        ImageWindow win = imp.getWindow();
+    private void createListeners(ImagePlus imp_listen) {
+        ImageWindow win = imp_listen.getWindow();
         ImageCanvas canvas = win.getCanvas();
         canvas.addMouseListener(this);
         canvas.addMouseMotionListener(this);
         canvas.addKeyListener(this);
-        imp.addImageListener(this);
-        plotImage.addImageListener(this);
+        imp_listen.addImageListener(this);
+        //plotImage.addImageListener(this);
 
     }
 
-    private void removeListeners() {
-        ImageWindow win = imp.getWindow();
+    private void removeListeners(ImagePlus imp_listen) {
+        ImageWindow win = imp_listen.getWindow();
         ImageCanvas canvas = win.getCanvas();
         canvas.removeMouseListener(this);
         canvas.removeMouseMotionListener(this);
         canvas.removeKeyListener(this);
-        imp.removeImageListener(this);
-        plotImage.removeImageListener(this);
+        imp_listen.removeImageListener(this);
+        //plotImage.removeImageListener(this);
     }
 
     /** Place the plot window to the right of the image window */
@@ -249,15 +283,11 @@ public class CSI_Dynamic_FFT
     /** make a Hamming window filter*/
     //float[][] makeHammingWindow() {
     FloatProcessor makeHammingWindow() {
-        Roi roi;
-        if (!isSelection()) {
-            roi = new Roi(0,0,imp.getWidth(), imp.getHeight());
-        }
-        else {
-            roi = imp.getRoi(); //get ROI of image
-        }
+        Roi roi = imp.getRoi();
+
         /* Calculate size */
         int maxN = Math.max(roi.getBounds().width, roi.getBounds().height);
+        //System.out.println("Hamming window roi: " + roi);
         /* Find max power of 2 of size */
         int pix = (int) Math.pow(2,Math.ceil((Math.log(maxN) / Math.log(2)))); //<-- my version
 
@@ -285,6 +315,7 @@ public class CSI_Dynamic_FFT
 
         //this.imp_copy.setCalibration(this.imp.getCalibration());
         Roi roiRect = this.imp_copy.getRoi();
+        //System.out.println("tile image roi: " + roiRect);
         int maxN = Math.max(roiRect.getBounds().width, roiRect.getBounds().height);
         /** Calculate power of 2 size */
         int pix = (int) Math.pow(2,Math.ceil((Math.log(maxN) / Math.log(2))));
@@ -372,14 +403,9 @@ public class CSI_Dynamic_FFT
 
     /** get a profile, analyze it and return a plot (or null if not possible) */
     FHT getFFT() {
-        if (!isSelection()) return null;
         ImageProcessor ip = imp.getProcessor();
         Roi roi = imp.getRoi();
-        if (ip == null || roi == null) return null; //these may change asynchronously
-        if (roi.getType() == Roi.LINE)
-            ip.setInterpolate(PlotWindow.interpolate);
-        else
-            ip.setInterpolate(false);
+        //System.out.println("getFFT roi: " + roi);
 
         /** Get filter: */
         FloatProcessor filter = makeHammingWindow();
@@ -390,10 +416,9 @@ public class CSI_Dynamic_FFT
         tileImage(); //sets up cropped ip with power of 2
         /** Multiply image roi with filter*/
         this.imp_copy = new ImagePlus(imp.getTitle(), multiplyImages(this.ip_copy, filter));
+        /** Take FFT and return*/
 
-        FHT fht = new FHT(ip_copy);
-
-        return fht;
+        return new FHT(ip_copy);
 
     }
 
@@ -405,6 +430,9 @@ public class CSI_Dynamic_FFT
         Roi roi = imp.getRoi();
         if (roi==null)
             return false;
+        if (roi.getBounds().width == 0 || roi.getBounds().height == 0)
+            return false;
+            //roi = new Roi(0,0,imp.getWidth(),imp.getHeight());
         return roi.getType()==Roi.LINE || roi.getType()==Roi.RECTANGLE;
     }
 

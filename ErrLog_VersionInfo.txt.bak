@@ -62,6 +62,9 @@ Exception in thread "Dynamic Profiler Plot" java.lang.ArrayIndexOutOfBoundsExcep
 Version 0.1.5:
 To/do: Try to preserve complex frequency info in FFT. One idea is to edit plotImage directly in the FFT method, or alternately to calculate the FFT in the main run method. 
 --need to fix array index out of bounds exception when no ROI selected. 
+--need to fix null pointer exception when images are closed. 
+--add icon
+--Remove progress bar from FFT
 For 4D Analyzer: while mouse is moving, sum over every other point if box contains more than 100 pts?
 
 FFT works. However, can't figure out this error message each time things are closed:
@@ -83,3 +86,33 @@ Exception in thread "AWT-EventQueue-0" java.lang.NullPointerException
 	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:101)
 	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:93)
 	at java.awt.EventDispatchThread.run(EventDispatchThread.java:82)
+
+Fixed that -- was due to image being referenced after it was closed. 
+
+New error: rectangle is zero
+
+getFFT roi: Roi[Rectangle, x=403, y=92, width=280, height=299]
+Hamming window roi: Roi[Rectangle, x=403, y=92, width=280, height=299]
+tile image roi: Roi[Rectangle, x=403, y=92, width=280, height=299]
+getFFT roi: Roi[Rectangle, x=403, y=92, width=280, height=299]
+Hamming window roi: Roi[Rectangle, x=403, y=92, width=280, height=299]
+tile image roi: Roi[Rectangle, x=403, y=92, width=280, height=299]
+getFFT roi: Roi[Rectangle, x=401, y=103, width=280, height=299]
+Hamming window roi: Roi[Rectangle, x=401, y=103, width=280, height=299]
+tile image roi: Roi[Rectangle, x=346, y=202, width=280, height=299]
+getFFT roi: Roi[Rectangle, x=248, y=351, width=280, height=299]
+Hamming window roi: Roi[Rectangle, x=248, y=351, width=280, height=299]
+tile image roi: Roi[Rectangle, x=232, y=382, width=280, height=299]
+getFFT roi: Roi[Rectangle, x=230, y=383, width=280, height=299]
+Hamming window roi: Roi[Rectangle, x=230, y=383, width=280, height=299]
+tile image roi: Roi[Rectangle, x=230, y=383, width=280, height=299]
+getFFT roi: Roi[Rectangle, x=908, y=249, width=0, height=0]
+Hamming window roi: Roi[Rectangle, x=908, y=249, width=0, height=0]
+Exception in thread "Dynamic FFT Plot" java.lang.ArrayIndexOutOfBoundsException: 0
+	at ij.process.FloatProcessor.<init>(FloatProcessor.java:58)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.makeHammingWindow(CSI_Dynamic_FFT.java:306)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.getFFT(CSI_Dynamic_FFT.java:414)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.run(CSI_Dynamic_FFT.java:198)
+	at java.lang.Thread.run(Thread.java:750)
+
+Fixed it: Realized the isSelection() check method was not accounting for the case where the ROI existed but with 0 width and height. Checked for that and it works now. 
