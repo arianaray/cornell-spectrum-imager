@@ -1,14 +1,15 @@
 package com.spectrumimager.CSI;
 
-import java.awt.Dimension;
-import java.awt.Point;
-import java.awt.Toolkit;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.awt.Rectangle;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.ChangeEvent;
 /** For brightness/contrast adjustment: */
 //import java.awt.event.AdjustmentListener;
 //import java.awt.event.ItemListener;
@@ -24,10 +25,12 @@ import java.nio.ByteOrder;
 import ij.IJ;
 import ij.ImageListener;
 import ij.ImagePlus;
+import ij.ImageStack;
 import ij.Prefs;
 import ij.WindowManager;
 import ij.gui.ImageCanvas;
 import ij.gui.ImageWindow;
+import ij.gui.ImagePanel;
 import ij.gui.Line;
 import ij.gui.Plot;
 import ij.gui.PlotWindow;
@@ -36,12 +39,15 @@ import ij.gui.Roi;
 import ij.measure.Calibration;
 import ij.plugin.PlugIn;
 import ij.process.ImageProcessor;
+import ij.plugin.ImagesToStack;
 import ij.plugin.FFT;
 import ij.process.FHT;
 import ij.process.LUT;
 import ij.util.Tools;
 import ij.process.FloatProcessor;
 import ij.plugin.filter.FFTCustomFilter;
+
+import javax.swing.*;
 
 /**
  * This plugin continuously plots the FFT of a rectangle.
@@ -54,14 +60,16 @@ import ij.plugin.filter.FFTCustomFilter;
  * Version 2009-Jun-09: obeys 'fixed y axis scale' in Edit>Options>Profile Plot Options
  */
 public class CSI_Dynamic_FFT
-        implements PlugIn, MouseListener, MouseMotionListener, KeyListener, ImageListener, Runnable {
+        implements PlugIn, MouseListener, MouseMotionListener, KeyListener, ImageListener, ChangeListener, ActionListener, Runnable {
     //MouseListener, MouseMotionListener, KeyListener: to detect changes to the selection of an ImagePlus
     //ImageListener: listens to changes (updateAndDraw) and closing of an image
     //Runnable: for background thread
     private ImagePlus imp;                  //the ImagePlus that we listen to and the last one
     /** Ariana's addition for FFT filtering*/
     private ImagePlus imp_copy; //the ImagePlus that the filter is applied to
-    private ImageProcessor ip_copy;
+    private FloatProcessor ip_copy;
+    private ImageStack imp_copy_stack; //for stack processing
+    private ImageStack plotImage_stack; //for stack display
     private ImagePlus plotImage;            //where we plot the profile
     private double img_min; //display minimum of plotimage
     private double img_max; //display maximum of plotImage
@@ -71,6 +79,13 @@ public class CSI_Dynamic_FFT
     private LUT img_lut; //LUT og plotImage
     private Thread bgThread;                //thread for plotting (in the background)
     private boolean doUpdate;               //tells the background thread to update
+    private JCheckBox chkFilter; //checkbox for doFilter.
+    private JCheckBox chkStack; //checkbox for doStack.
+    private JButton butIFFT; //button for inverseFFT
+    private JButton butFFT; //button for forwardFFT
+    private boolean doFilter = true; //for doing filter
+    private boolean doStack_ifft = true; //for doing iFFT of whole stack at once.
+    private boolean isStack;
 
     /* Initialization and plot for the first time. Later on, updates are triggered by the listeners **/
     public void run(String arg) {
@@ -85,19 +100,85 @@ public class CSI_Dynamic_FFT
             return;
 
         }
+        if (imp.isStack()) {
+            isStack = true;
+        }
+        else {
+            isStack = false;
+            //imp.setTitle("not stack");
+        }
 
         //System.out.println("Initial roi: " + imp.getRoi());
 
-        // new plot window
+        // Take FFT
         FHT fft = getFFT();
         fft.transform();
+        fft.originalBitDepth = imp.getBitDepth();
         IJ.showProgress(0.0);
         fft.setShowProgress(false);
+
+        // Make new image to show FFT
         plotImage = new ImagePlus();
         plotImage.setProcessor(fft.getPowerSpectrum());
         plotImage.show();
         plotImage.setProperty("FHT",fft);
-        plotImage.setProperty("Info","tee hee\n");
+        //* New addition 1.7 //
+        plotImage.setProperty("Info","tee hee\n "+String.valueOf(imp.getBitDepth())+"\n");
+        plotImage.setProperty("bitdepth",imp.getBitDepth());
+
+        // Make ImageWindow to hold plotImage and components
+        ImageWindow plotWindow = new ImageWindow(plotImage);
+        // Make master panel component to hold all subpanels
+        JPanel panAll = new JPanel(); //copying CSI Spectrum Analyzer
+
+        // Make 1 panel for Checkbox
+        Panel panel1 = new Panel();
+        panel1.setLayout(new GridBagLayout()); //make gridbag layout for flexible placement
+        GridBagConstraints gbc = new GridBagConstraints(); //set up constraints for gridbag
+        panel1.setLayout(new FlowLayout(FlowLayout.RIGHT));
+        /** Add checkbox for windowing FFT*/
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        chkFilter = new JCheckBox("Window FFT", true);
+        chkFilter.addChangeListener(this);
+        chkFilter.setVisible(true);
+        panel1.add(chkFilter, gbc);
+
+        /** Add button for iFFT*/
+        // Make 1 panel for do iFFT and do FFT
+        Panel panel2 = new Panel();
+        panel2.setLayout(new GridBagLayout());
+        gbc = new GridBagConstraints();
+        gbc.gridx = 5;
+        gbc.gridy = 0;
+        gbc.gridwidth = 50;
+        butIFFT = new JButton("Make iFFT Stack");
+        butIFFT.addActionListener(this);
+        butIFFT.setVisible(true);
+        //panel1.add(butIFFT, gbc);
+        panel2.add(butIFFT, gbc);
+        gbc = new GridBagConstraints();
+        gbc.gridx = 55;
+        gbc.gridy = 0;
+        gbc.gridwidth = 50;
+        butFFT = new JButton("Make FFT Stack");
+        butFFT.addActionListener(this);
+        butFFT.setVisible(true);
+        panel2.add(butFFT, gbc);
+
+        panAll.setLayout(new BoxLayout(panAll, BoxLayout.X_AXIS));
+        panAll.add(panel1);
+        panAll.add(panel2);
+        plotWindow.add(panAll);
+        //plotWindow.pack();
+
+        //plotImage.getWindow().add(panel1);
+        IJ.run("Out [-]");
+        IJ.run("In [+]");
+
+        //plotImage.setProperty("FHT",fft);
+        plotImage.setProperty("Info","tee hee\n "+String.valueOf(imp.getBitDepth())+"\n");
+        plotImage.setProperty("bitdepth",imp.getBitDepth());
         plotImage.setTitle("FFT of " + imp.getShortTitle());
 
         /* Set global variables */
@@ -135,6 +216,7 @@ public class CSI_Dynamic_FFT
     // this listener is activated if the image content is changed (by imp.updateAndDraw)
     public synchronized void imageUpdated(ImagePlus imp) {
         boolean sliceChanged = false;
+        // if selection is deleted, default selection is entire image
         if (imp == this.imp ) {
             if (!isSelection()) {
                 Roi roi = new Roi(0, 0, imp.getWidth(), imp.getHeight());
@@ -143,7 +225,7 @@ public class CSI_Dynamic_FFT
 
             //System.out.println("imageUpdated roi: " + imp.getRoi());
 
-                //IJ.run(imp, "Restore Selection", "");
+            //IJ.run(imp, "Restore Selection", "");
             if (this.slice_num != imp.getCurrentSlice()) {
                 sliceChanged = true;
             }
@@ -151,6 +233,9 @@ public class CSI_Dynamic_FFT
             notify();
         }
         /* Make brightness/contrast and LUT sticky */
+
+        // NEED TO EDIT: fix auto contrasting for stack
+        //can try getting brightness for whole image rather than roi, using that as trigger
 
         if (imp == this.plotImage ) {
             if (this.img_size_x == imp.getHeight() && sliceChanged == false) {
@@ -209,6 +294,27 @@ public class CSI_Dynamic_FFT
 
             FHT fft = getFFT();
             fft.transform();
+            fft.originalBitDepth = imp.getBitDepth();
+            IJ.showProgress(0.0);
+            fft.setShowProgress(false);
+
+            plotImage.setProcessor(fft.getPowerSpectrum());
+            plotImage.setProperty("FHT",fft);
+            plotImage.setProperty("Info","tee hee\n "+String.valueOf(imp.getBitDepth())+"\n");
+            plotImage.setProperty("bitdepth",imp.getBitDepth());
+            plotImage.show();
+            //plotImage.setTitle(String.valueOf(plotImage.isStack()));
+
+            //plotImage.setTitle(String.valueOf(doStack));
+
+            plotImage.setDisplayRange(this.img_min, this.img_max);
+            plotImage.setLut(this.img_lut);
+            plotImage.setProperty("Info","tee hee\n "+String.valueOf(imp.getBitDepth())+"\n");
+            plotImage.setProperty("bitdepth",imp.getBitDepth());
+
+            /*
+            FHT fft = getFFT();
+            fft.transform();
             IJ.showProgress(0.0);
             fft.setShowProgress(false); //you are here ***
             plotImage.setProcessor(fft.getPowerSpectrum());
@@ -217,6 +323,8 @@ public class CSI_Dynamic_FFT
             plotImage.setProperty("FHT",fft);
             plotImage.setProperty("Info","tee hee");
             plotImage.setCalibration(imp.getCalibration());
+
+             */
             synchronized(this) {
                 if (doUpdate) {
                     doUpdate = false;  //and loop again
@@ -280,35 +388,95 @@ public class CSI_Dynamic_FFT
         canvas.requestFocus();
     }
 
-    /** make a Hamming window filter*/
-    //float[][] makeHammingWindow() {
-    FloatProcessor makeHammingWindow() {
-        Roi roi = imp.getRoi();
+
+    FloatProcessor makeRectangularHammingWindow() {
+
+        Roi roi = imp.getRoi(); //change in getFFT()
 
         /* Calculate size */
-        int maxN = Math.max(roi.getBounds().width, roi.getBounds().height);
-        //System.out.println("Hamming window roi: " + roi);
+        int maxN = Math.max(roi.getBounds().width, roi.getBounds().height); //change in getFFT()
         /* Find max power of 2 of size */
-        int pix = (int) Math.pow(2,Math.ceil((Math.log(maxN) / Math.log(2)))); //<-- my version
+        int pix = (int) Math.pow(2,Math.ceil((Math.log(maxN) / Math.log(2)))); //change in getFFT()
 
-        float[][] filter = new float[pix][pix]; //<-- create empty filter
+        FloatProcessor filter_padded = new FloatProcessor(pix,pix);
 
-        for (int n1=0; n1<pix; n1++) {
-            for (int n2=0; n2<pix; n2++) {
-                float r1 = (float) (2 * n1) / pix - 1;
-                float r2 = (float) (2 * n2) / pix - 1;
-                float r3 = (float) (Math.pow(r1, 2) + Math.pow(r2, 2));
-                r3 = (float) Math.sqrt(r3);
-                float w3 = (float) ((float) 0.5 * (Math.cos(Math.PI * r3) + 1));
-                if (r3 >= 0 && r3 < 1) {
-                    filter[n1][n2] = 1 * w3;
-                } else {
-                    filter[n1][n2] = 0;
-                }
+        int rwidth = roi.getBounds().width;
+        int rheight = roi.getBounds().height;
+
+        //float[][] filter = new float[rwidth][rheight]; //<-- create empty filter
+        FloatProcessor filter = new FloatProcessor(rwidth, rheight);
+        float filt_w = 0;
+        float filt_h = 0;
+
+        int count_w = 0;
+        int count_h = 0;
+        //float cutoff = 0.8F;
+
+        /** Reframe coordinates as distance to center*/
+        int start_w = (int) -Math.floor((double) rwidth/2);
+        int end_w = rwidth + start_w;
+
+        int start_h = (int) -Math.floor((double) rheight/2);
+        int end_h = rheight + start_h;
+
+
+        /** Pad sides of image with zeros to make it power of 2 size*/
+        int pad_w_left = (int) pix/2 + start_w;
+        //int pad_w_right = (int) pix - pad_w_left - rwidth;
+        int pad_h_left = (int) pix/2 + start_h;
+        //int pad_h_right = (int) pix - pad_h_left - rheight;
+
+        for (int n1=start_w; n1<end_w; n1++) {
+
+            //Calculate width hamming function
+            filt_w = (float) (0.54 + 0.46*Math.cos(Math.PI*n1/(start_w)));
+
+            for (int n2=start_h; n2<end_h; n2++) {
+
+                //Calculate height hamming function
+                filt_h = (float) (0.54 + 0.46*Math.cos(Math.PI*n2/(start_h)));
+
+                //Multiply filters together
+                //filter[count_w][count_h] = filt_w*filt_h;
+
+                //Insert filter pixel into filter
+                filter_padded.putPixelValue(pad_w_left+count_w, pad_h_left+count_h, filt_w*filt_h);
+                filter.putPixelValue(count_w, count_h, filt_w*filt_h);
+
+                count_h += 1;
             }
+            count_h = 0;
+            count_w +=1;
         }
 
-        return new FloatProcessor(filter);
+        //return filter_padded;
+        return filter;
+    }
+
+    FloatProcessor padZeros(FloatProcessor filteredImage) {
+
+        int maxN = Math.max(filteredImage.getWidth(), filteredImage.getHeight());
+        /** Calculate power of 2 size */
+        int pix = (int) Math.pow(2,Math.ceil((Math.log(maxN) / Math.log(2))));
+        /** Fit image into power of 2 size (from FFT_Filter.java) */
+        int start_w = (int) -Math.floor((double) filteredImage.getWidth()/2);
+        int start_h = (int) -Math.floor((double) filteredImage.getHeight()/2);
+        int pad_w_left = (int) pix/2 + start_w;
+        int pad_h_left = (int) pix/2 + start_h;
+
+        //Rectangle fitRect = new Rectangle();
+        //fitRect.x = (int) Math.round((pix - roiRect.getBounds().width)/2.0);
+        //fitRect.y = (int) Math.round((pix - roiRect.getBounds().height)/2.0);
+        //fitRect.width = roiRect.getBounds().width;
+        //fitRect.height = roiRect.getBounds().height;
+        /** Pad image to power of 2 size */
+        FloatProcessor filteredPadImage = new FloatProcessor(pix, pix);
+
+        filteredPadImage.insert(filteredImage,pad_w_left,pad_h_left);
+
+        return filteredPadImage;
+
+        //tileZeros(imp_copy.getProcessor(), pix, pix, fitRect.x, fitRect.y);
     }
 
     void tileImage() {
@@ -326,7 +494,13 @@ public class CSI_Dynamic_FFT
         fitRect.width = roiRect.getBounds().width;
         fitRect.height = roiRect.getBounds().height;
         /** Pad image to power of 2 size */
-        tileMirror(imp_copy.getProcessor(), pix, pix, fitRect.x, fitRect.y);
+        if (doFilter) {
+            tileMirror(imp_copy.getProcessor(), pix, pix, fitRect.x, fitRect.y);
+        }
+        else {
+            tileZeros(imp_copy.getProcessor(), pix, pix, fitRect.x, fitRect.y);
+        }
+        //tileZeros(imp_copy.getProcessor(), pix, pix, fitRect.x, fitRect.y);
     }
 
     /** Puts imageprocessor (ROI) into a new imageprocessor of size width x height y at position (x,y).
@@ -338,9 +512,9 @@ public class CSI_Dynamic_FFT
             return;
         }
 
-        this.ip_copy = ip.createProcessor(width, height);
+        this.ip_copy = ip.createProcessor(width, height).convertToFloatProcessor();
 
-        ImageProcessor ip2 = ip.crop();
+        ImageProcessor ip2 = ip.crop().convertToFloatProcessor();
         int w2 = ip2.getWidth();
         int h2 = ip2.getHeight();
 
@@ -385,14 +559,33 @@ public class CSI_Dynamic_FFT
 
     }
 
-    ImageProcessor multiplyImages(ImageProcessor ip_copy, FloatProcessor filter) {
+    /** Puts imageprocessor (ROI) into a new imageprocessor of size width x height y at position (x,y).
+     The image is padded with zeros */
+    /** Ariana note: Copied from FFT_Filter.java*/
+    void tileZeros(ImageProcessor ip, int width, int height, int x, int y) {
+        if (x < 0 || x > (width -1) || y < 0 || y > (height -1)) {
+            IJ.error("Image to be tiled is out of bounds.");
+            return;
+        }
+
+        this.ip_copy = ip.createProcessor(width, height).convertToFloatProcessor();
+
+        ImageProcessor ip2 = ip.crop();
+        int w2 = ip2.getWidth();
+        int h2 = ip2.getHeight();
+
+        this.ip_copy.insert(ip2,x,y);
+
+    }
+
+    FloatProcessor multiplyImages(FloatProcessor ip_copy, FloatProcessor filter) {
 
         int w2 = ip_copy.getWidth();
         int h2 = ip_copy.getHeight();
         double val;
 
-        for (int i = 0; i < h2; i++) {
-            for (int j = 0; j < w2; j++) {
+        for (int i = 0; i < w2; i++) {
+            for (int j = 0; j < h2; j++) {
                 val = ip_copy.getPixelValue(i, j)*filter.getPixelValue(i, j);
                 ip_copy.putPixelValue(i, j, val);
             }
@@ -403,22 +596,106 @@ public class CSI_Dynamic_FFT
 
     /** get a profile, analyze it and return a plot (or null if not possible) */
     FHT getFFT() {
-        ImageProcessor ip = imp.getProcessor();
+        ImageProcessor ip = imp.getProcessor(); //evaluate if i need this
         Roi roi = imp.getRoi();
         //System.out.println("getFFT roi: " + roi);
 
         /** Get filter: */
-        FloatProcessor filter = makeHammingWindow();
+        FloatProcessor filter;
         /** Copy ROI*/
         this.imp_copy = new ImagePlus(imp.getTitle(), imp.getProcessor());
         imp_copy.setRoi(roi);
+        imp_copy = imp_copy.crop();
+        this.ip_copy = imp_copy.getProcessor().convertToFloatProcessor(); //new 1.9
+        //ip_copy = ip_copy.crop().convertToFloatProcessor(); //new 1.9
         /** Tile image roi*/
-        tileImage(); //sets up cropped ip with power of 2
+        //tileImage(); //sets up cropped ip with power of 2  //delete 1.9
         /** Multiply image roi with filter*/
-        this.imp_copy = new ImagePlus(imp.getTitle(), multiplyImages(this.ip_copy, filter));
+        if (doFilter) {
+            //filter = makeHammingWindow();
+            filter = makeRectangularHammingWindow();
+            //this.imp_copy.setProcessor(filter);
+            //imp_copy.show();
+            this.ip_copy = multiplyImages(this.ip_copy, filter);
+            //this.imp_copy.setProcessor(ip_copy);
+            //imp_copy.show();
+
+            //this.imp_copy = new ImagePlus(imp.getTitle(), multiplyImages(this.ip_copy, filter));
+            this.ip_copy = padZeros(this.ip_copy);
+        }
+        else {
+            //this.imp_copy = new ImagePlus(imp.getTitle(), padZeros(this.ip_copy));
+            this.ip_copy = padZeros(this.ip_copy);
+        }
         /** Take FFT and return*/
 
         return new FHT(ip_copy);
+
+    }
+
+    /** You are here!!! */
+    ImageStack getFFTStack() {
+        Roi roi = imp.getRoi();
+        FHT fft;
+
+        ImageStack imp_fft_stack = new ImageStack();
+
+        for (int i = 1; i < imp.getNSlices(); i++) {
+            this.imp.setSliceWithoutUpdate(i);
+            String slice_title = "FFT of " + imp.getShortTitle();
+            fft = getFFT();
+            fft.transform();
+            imp_fft_stack.addSlice(slice_title, fft.getPowerSpectrum());
+        }
+
+        return imp_fft_stack;
+    }
+
+    ImageStack getIFFTStack() {
+
+        /** Get the ROI mask for the inverse FFT (Fourier Filtering)*/
+        Roi roi_fft = plotImage.getRoi();
+        if (roi_fft == null || roi_fft.getBounds().width == 0 || roi_fft.getBounds().height == 0) {
+            roi_fft = new Roi(0,0,plotImage.getWidth(), plotImage.getHeight());
+            plotImage.setRoi(roi_fft);
+        }
+        /** Get the original ROI on the real-space image*/
+        Roi roi_real = imp.getRoi();
+        int start_w = (int) Math.ceil((double) (roi_fft.getBounds().width - roi_real.getBounds().width)/2);
+        int start_h = (int) Math.ceil((double) (roi_fft.getBounds().height -roi_real.getBounds().height)/2);
+        roi_real = new Roi(start_w, start_h,roi_real.getBounds().width, roi_real.getBounds().height );
+
+        //ImageStack imp_ifft_stack = new ImageStack(roi_real.getBounds().width, roi_real.getBounds().height);
+        ImageStack imp_ifft_stack = new ImageStack(); //Image stack for FFT
+        ImageProcessor filter;
+        //ImageProcessor fft_ip;
+        ImagePlus fft_imp = new ImagePlus();
+        String slice_title;
+        ImagePlus tmp = new ImagePlus();
+
+        for (int i=1; i <= imp.getNSlices(); i++) {
+            this.imp.setSliceWithoutUpdate(i); //set slice in original image
+            slice_title = "iFFT of " + imp.getShortTitle(); //set slice title
+            //Take FFT
+            fft_imp = FFT.forward(imp.crop());
+            System.out.println(fft_imp.getPropsInfo());
+            //fft_imp.setProperty("FHT",fft_imp);
+            fft_imp.setRoi(roi_fft);
+            IJ.run(fft_imp, "Clear Outside", "");
+            //fft_imp = WindowManager.getCurrentImage();
+            //fft_imp.getProcessor().fillOutside(roi_fft);
+            //fft_imp.hide();
+
+            //Multiply filter to FFT
+            fft_imp = FFT.inverse(fft_imp);
+
+            //fft_slice.inverseTransform(); //take iFFT
+            //fft_slice.setRoi(roi_real); //set original ROI
+            imp_ifft_stack.addSlice(slice_title, fft_imp.duplicate().getProcessor());
+        }
+
+        fft_imp.close();
+        return imp_ifft_stack;
 
     }
 
@@ -432,8 +709,44 @@ public class CSI_Dynamic_FFT
             return false;
         if (roi.getBounds().width == 0 || roi.getBounds().height == 0)
             return false;
-            //roi = new Roi(0,0,imp.getWidth(),imp.getHeight());
+        //roi = new Roi(0,0,imp.getWidth(),imp.getHeight());
         return roi.getType()==Roi.LINE || roi.getType()==Roi.RECTANGLE;
     }
 
+    public void stateChanged(ChangeEvent e) {
+        if (e.getSource()==chkFilter) {
+            doFilter = chkFilter.isSelected();
+        }
+
+
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+
+        // YOU ARE HERE Jan 29 2024
+        Object b = e.getSource(); //Find source of action performed (which button)
+        if (b== butIFFT) {
+            //Create new window for iFFT
+
+            //Make iFFT Stack
+            ImagePlus ifftStack = new ImagePlus();
+            ifftStack.setTitle("iFFT of Stack: "+imp.getShortTitle());
+            ifftStack.setStack(getIFFTStack());
+            ifftStack.show();
+
+        }
+        if (b== butFFT) {
+            //doStack_ifft = !doStack_ifft; //Flip the state to a different switch
+            ImagePlus fftStack = new ImagePlus();
+            fftStack.setTitle("FFT of Stack: "+imp.getShortTitle());
+            fftStack.setStack(getFFTStack()); //haven't written yet.
+            fftStack.show();
+
+        }
+        if (b==chkFilter) {
+            doFilter = chkFilter.isSelected();
+        }
+
+    }
 }

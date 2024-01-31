@@ -118,3 +118,51 @@ Exception in thread "Dynamic FFT Plot" java.lang.ArrayIndexOutOfBoundsException:
 Fixed it: Realized the isSelection() check method was not accounting for the case where the ROI existed but with 0 width and height. Checked for that and it works now. 
 
 Still can't figure out how to get rid of the progress bar. 
+
+Adding checkbox:
+(Fiji Is Just) ImageJ 2.14.0/1.54f; Java 1.8.0_322 [64-bit]; Windows 10 10.0; 295MB of 48784MB (<1%)
+ 
+java.lang.NullPointerException
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.run(CSI_Dynamic_FFT.java:103)
+	at ij.IJ.runUserPlugIn(IJ.java:244)
+	at ij.IJ.runPlugIn(IJ.java:210)
+	at ij.Executer.runCommand(Executer.java:152)
+	at ij.Executer.run(Executer.java:70)
+	at ij.IJ.run(IJ.java:326)
+	at ij.IJ.run(IJ.java:337)
+	at ij.macro.Functions.doRun(Functions.java:703)
+	at ij.macro.Functions.doFunction(Functions.java:99)
+	at ij.macro.Interpreter.doStatement(Interpreter.java:281)
+	at ij.macro.Interpreter.doBlock(Interpreter.java:715)
+	at ij.macro.Interpreter.runMacro(Interpreter.java:190)
+	at ij.macro.MacroRunner.run(MacroRunner.java:159)
+	at java.lang.Thread.run(Thread.java:750)
+
+
+** Check FFT with 16 bit images. 
+** If "Window FFT" unselected, try either padding with zeros or not padding at all, instead of mirroring. 
+** If image max or min in FFT changes, ignore it (check after calculating FFT - set boolean if it changed naturally from FFT)
+** Automatically make inverse FFT a 32-bit image (or rescale to 8 bit range). 
+** Get rid of tile mirror and just pad with zeros (or check what ImageJ FFT does)
+** consider cropping to roi for imp_copy to save memory
+** to save FFT property could try images to stack (doesn't work :( )
+
+Current issue:
+
+Exception in thread "Dynamic FFT Plot" java.lang.IllegalArgumentException: Wrong dimensions for this stack
+	at ij.ImageStack.setProcessor(ImageStack.java:344)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.getFFTStack(CSI_Dynamic_FFT.java:514)
+	at com.spectrumimager.CSI.CSI_Dynamic_FFT.run(CSI_Dynamic_FFT.java:267)
+	at java.lang.Thread.run(Thread.java:750)
+
+
+-- check z slider event 
+
+-- Figure out how to get rid of the filtering message when inverse FFT
+-- Make an inverse FFT button for stack. 
+
+!!! AutoContrast stacks on produces bug (have to copy display settings from imp to imp_copy 
+
+*** Lookin into DM4 reader
+*** use Nion Swift for EELS
+*** Need to fix EELS browser for IJ 2

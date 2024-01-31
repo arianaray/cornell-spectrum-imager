@@ -14,7 +14,7 @@
 
 	<groupId>com.spectrumimager.CSI</groupId>        <!-- FIXME: Your organization groupId here -->
 	<artifactId>Cornell_Spectrum_Imager</artifactId> <!-- FIXME: Your project artifactId here   -->
-	<version>0.1.5</version>
+	<version>0.1.9</version>
 
 	<name>Cornell Spectrum Imager</name>                                               <!-- FIXME: Your project name here          -->
 	<description>Spectrum and Diffraction image analyzer.</description> <!-- FIXME: Your project description here   -->
